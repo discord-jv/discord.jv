@@ -1,4 +1,6 @@
 import com.seailz.discordjv.DiscordJv;
+import com.seailz.discordjv.linked.LinkedRoles;
+import com.seailz.discordjv.model.application.ApplicationRoleConnectionMetadata;
 import com.seailz.discordjv.model.application.Intent;
 import com.seailz.discordjv.model.status.Status;
 import com.seailz.discordjv.model.status.StatusType;
@@ -11,6 +13,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 public class DiscordJvTest {
@@ -25,7 +28,7 @@ public class DiscordJvTest {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        DiscordJv discordJv = new DiscordJv(token, EnumSet.of(Intent.GUILDS, Intent.GUILD_MESSAGES));
+        DiscordJv discordJv = new DiscordJv(token, EnumSet.of(Intent.GUILDS, Intent.GUILD_MESSAGES, Intent.MESSAGE_CONTENT, Intent.GUILD_PRESENCES));
 
         ArrayList<Activity> activities = new ArrayList<>();
         activities.add(
@@ -35,6 +38,17 @@ public class DiscordJvTest {
         discordJv.setStatus(status);
 
         discordJv.clearCommands();
+
+        discordJv.getSelfInfo().setRoleConnections(new ApplicationRoleConnectionMetadata(
+                ApplicationRoleConnectionMetadata.Type.BOOLEAN_EQUAL, "testvalue", "TestValue", "EpicDescription"
+        ));
+
+        LinkedRoles linked = new LinkedRoles("1052904571292360754", "VMcV1odlv-RJQg7O-CfObyii6JmxhhaM", "http://localhost:8080/hello", "/hello", "1052566805182427176", discordJv);
+        HashMap<String, Object> values=  new HashMap<>();
+        values.put("testvalue", "true");
+        linked.updateRoles("SEAOLZTESKR", null, values, "Yenhf5zqdXgyRQxfpcfx1uFU3Sgh8R");
+
+
     }
 
 }

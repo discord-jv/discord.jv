@@ -158,7 +158,7 @@ public class DiscordJv {
     }
 
     public DiscordJv(String token) throws ExecutionException, InterruptedException {
-        this(token, EnumSet.of(Intent.GUILDS, Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS), APIVersion.getLatest());
+        this(token, EnumSet.of(Intent.ALL), APIVersion.getLatest());
     }
 
     public DiscordJv(String token, EnumSet<Intent> intents) throws ExecutionException, InterruptedException {
