@@ -12,30 +12,37 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-/**
- * A class that represents a Discord request
- *
- * @param body    The body of the request
- * @param headers The headers of the request
- * @param url     The URL of the request
- * @param baseUrl The endpoint URL of the request
- * @author Seailz
- * @see DiscordJv
- * @since 1.0
- */
-public record DiscordRequest(
-        JSONObject body,
-        HashMap<String, String> headers,
-        String url,
-        DiscordJv djv,
-        String baseUrl,
-        RequestMethod requestMethod
-) {
+public class DiscordRequest {
+
+
+    private JSONObject body;
+    private final HashMap<String, String> headers;
+    private final String url;
+    private final DiscordJv djv;
+    private final String baseUrl;
+    private final RequestMethod requestMethod;
+    private JSONArray aBody;
+
+    public DiscordRequest(JSONObject body, HashMap<String, String> headers, String url, DiscordJv djv, String baseUrl, RequestMethod requestMethod) {
+        this.body = body;
+        this.headers = headers;
+        this.url = url;
+        this.djv = djv;
+        this.baseUrl = baseUrl;
+        this.requestMethod = requestMethod;
+    }
+    public DiscordRequest(JSONArray body, HashMap<String, String> headers, String url, DiscordJv djv, String baseUrl, RequestMethod requestMethod) {
+        this.aBody = body;
+        this.headers = headers;
+        this.url = url;
+        this.djv = djv;
+        this.baseUrl = baseUrl;
+        this.requestMethod = requestMethod;
+    }
 
     /**
      * Sends the request to the Discord API
@@ -45,7 +52,7 @@ public record DiscordRequest(
      *
      * @return The {@link DiscordResponse} from the Discord API
      */
-    private DiscordResponse invoke(String json) {
+    private DiscordResponse invoke(String contentType, boolean auth) {
         try {
             String url = URLS.BASE_URL + this.url;
             URL obj = new URL(url);
@@ -60,27 +67,27 @@ public record DiscordRequest(
 
             con.uri(obj.toURI());
 
+            String s = body != null ? body.toString() : aBody.toString();
             if (requestMethod == RequestMethod.POST) {
-                con.POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+                con.POST(HttpRequest.BodyPublishers.ofString(s));
             } else if (requestMethod == RequestMethod.PATCH) {
-                con.method("PATCH", HttpRequest.BodyPublishers.ofString(body.toString()));
+                con.method("PATCH", HttpRequest.BodyPublishers.ofString(s));
             } else if (requestMethod == RequestMethod.PUT) {
-                con.method("PUT", HttpRequest.BodyPublishers.ofString(body.toString()));
+                con.method("PUT", HttpRequest.BodyPublishers.ofString(s));
             }
             else if (requestMethod == RequestMethod.DELETE) {
-                con.method("DELETE", HttpRequest.BodyPublishers.ofString(body.toString()));
+                con.method("DELETE", HttpRequest.BodyPublishers.ofString(s));
             } else if (requestMethod == RequestMethod.GET) {
                 con.GET();
             } else {
-                con.method(requestMethod.name(), HttpRequest.BodyPublishers.ofString(body.toString()));
+                con.method(requestMethod.name(), HttpRequest.BodyPublishers.ofString(s));
             }
 
             con.header("User-Agent", "discord.jv (https://github.com/discord-jv/, 1.0.0)");
-            con.header("Authorization", "Bot " + djv.getToken());
-            con.header("Content-Type", "application/json");
-
-            byte[] out = body.toString().getBytes(StandardCharsets.UTF_8);
-
+            if (auth) con.header("Authorization", "Bot " + djv.getToken());
+            if (contentType == null) con.header("Content-Type", "application/json");
+            if (contentType != null) con.header("Content-Type", contentType); // switch to url search params
+            headers.forEach(con::header);
 
             HttpRequest request = con.build();
             HttpClient client = HttpClient.newHttpClient();
@@ -129,6 +136,7 @@ public record DiscordRequest(
                                     rateLimit.remaining() - 1,
                                     rateLimit.resetAfter()
                             ));
+                            running = false;
                         }
                     }
                 }).start();
@@ -160,8 +168,9 @@ public record DiscordRequest(
 
             if (responseCode == 201) return null;
 
-            System.out.println(body);
+            System.out.println(body == null ? aBody : body);
 
+            System.out.println(response.body());
             JSONObject error = new JSONObject(response.body());
             JSONArray errorArray;
 
@@ -176,7 +185,7 @@ public record DiscordRequest(
                     } catch (JSONException exx) {
                         throw new UnhandledDiscordAPIErrorException(
                                 responseCode,
-                                "Unhandled Discord API Error. Please report this to the developer of DiscordJv." + error.toString()
+                                "Unhandled Discord API Error. Please report this to the developer of DiscordJv." + error
                         );
                     }
                 }
@@ -198,15 +207,23 @@ public record DiscordRequest(
     }
 
     public DiscordResponse invoke(JSONObject body) {
-        return invoke(body.toString());
+        return invoke(null, true);
+    }
+
+    public DiscordResponse invokeNoAuth(JSONObject body) {
+        return invoke(null, false);
+    }
+
+    public DiscordResponse invokeNoAuthCustomContent(String contentType) {
+        return invoke(contentType, false);
     }
 
     public DiscordResponse invoke(JSONArray arr) {
-        return invoke(arr.toString());
+        return invoke(null, true);
     }
 
     public DiscordResponse invoke() {
-        return invoke(body.toString());
+        return invoke(null, true);
     }
 
     /**
@@ -227,4 +244,22 @@ public record DiscordRequest(
             super("DiscordAPI [Error " + HttpStatus.valueOf(code) + "]: " + error);
         }
     }
+
+    public JSONObject body() {
+        return body;
+    }
+
+    public JSONArray array() {
+        return aBody;
+    }
+
+    public HashMap<String, String> headers() {
+        return headers;
+    }
+
+    public String url() {
+        return url;
+    }
+
+
 }
