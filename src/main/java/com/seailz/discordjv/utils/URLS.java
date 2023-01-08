@@ -58,6 +58,11 @@ public final class URLS {
                 public static final String CREATE_AUTO_MOD_RULE = "/guilds/{guild.id}/auto-moderation/rules";
              }
 
+            /**
+             * The base url for the Guilds endpoint.
+             */
+            public static final String BASE_URL = "/guilds";
+
             public static class CHANNELS {
                 /**
                  * Creates a channel
