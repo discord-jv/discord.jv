@@ -1,5 +1,6 @@
 package com.seailz.discordjv;
 
+import com.seailz.discordjv.action.guild.CreateGuildAction;
 import com.seailz.discordjv.action.guild.GetCurrentUserGuildsAction;
 import com.seailz.discordjv.command.Command;
 import com.seailz.discordjv.command.CommandChoice;
@@ -25,6 +26,9 @@ import com.seailz.discordjv.model.channel.audio.VoiceRegion;
 import com.seailz.discordjv.model.emoji.sticker.Sticker;
 import com.seailz.discordjv.model.emoji.sticker.StickerPack;
 import com.seailz.discordjv.model.guild.Guild;
+import com.seailz.discordjv.model.guild.filter.ExplicitContentFilterLevel;
+import com.seailz.discordjv.model.guild.notification.DefaultMessageNotificationLevel;
+import com.seailz.discordjv.model.guild.verification.VerificationLevel;
 import com.seailz.discordjv.model.status.Status;
 import com.seailz.discordjv.model.user.User;
 import com.seailz.discordjv.utils.Checker;
@@ -586,6 +590,16 @@ public class DiscordJv {
             regions.add(VoiceRegion.decompile(response.getJSONObject(i)));
         }
         return regions;
+    }
+
+    /**
+     * Creates a Guild. The app must be in less than 10 guilds in order to do this.
+     * @param name The name of the Guild.
+     * @param messageNotificationLevel The default message notification level of the Guild.
+     * @return The action that creates the Guild.
+     */
+    public CreateGuildAction createGuild(String name, DefaultMessageNotificationLevel messageNotificationLevel) {
+        return new CreateGuildAction(name, messageNotificationLevel, getSelfUser().discordJv());
     }
 
 }

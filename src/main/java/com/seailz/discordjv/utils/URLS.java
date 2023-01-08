@@ -58,6 +58,8 @@ public final class URLS {
                 public static final String CREATE_AUTO_MOD_RULE = "/guilds/{guild.id}/auto-moderation/rules";
              }
 
+            public static final String CREATE_GUILD = "/guilds";
+
             public static class CHANNELS {
                 /**
                  * Creates a channel
@@ -266,6 +268,13 @@ public final class URLS {
              * @param id The id of the guild
              */
             public static String LEAVE_GUILD = "/users/@me/guilds/{guild.id}";
+
+            /**
+             * Deletes a guild.
+             *
+             * @param id The id of the guild
+             */
+            public static String DELETE_GUILD = "/guilds/{guild.id}";
 
             public static class AUTOMOD {
                 /**

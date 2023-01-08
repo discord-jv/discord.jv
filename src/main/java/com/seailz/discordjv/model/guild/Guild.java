@@ -22,6 +22,7 @@ import com.seailz.discordjv.model.user.User;
 import com.seailz.discordjv.utils.*;
 import com.seailz.discordjv.utils.cache.JsonCache;
 import com.seailz.discordjv.utils.discordapi.DiscordRequest;
+import com.seailz.discordjv.utils.discordapi.DiscordResponse;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.client.HttpServerErrorException;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -832,6 +834,21 @@ public record Guild(
 
     public CreateGuildChannelAction createChannel(String name, ChannelType type) {
         return new CreateGuildChannelAction(name, type, this, discordJv);
+    }
+
+    /**
+     * Deletes the Guild. The app must own the Guild in order to delete it.
+     * This cannot be undone.
+     */
+    public void delete() {
+        DiscordResponse res = new DiscordRequest(
+                new JSONObject(),
+                new HashMap<>(),
+                URLS.DELETE.GUILD.DELETE_GUILD.replace("{guild.id}", id),
+                discordJv,
+                URLS.DELETE.GUILD.DELETE_GUILD,
+                RequestMethod.DELETE
+        ).invoke();
     }
 
 
