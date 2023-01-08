@@ -768,9 +768,9 @@ public record Guild(
         DiscordResponse res = new DiscordRequest(
                 new JSONObject(),
                 new HashMap<>(),
-                URLS.GET.GUILDS.GET_GUILD.replace("{guild.id}", id),
+                URLS.DELETE.GUILD.DELETE_GUILD.replace("{guild.id}", id),
                 discordJv,
-                URLS.BASE_URL,
+                URLS.DELETE.GUILD.DELETE_GUILD,
                 RequestMethod.DELETE
         ).invoke();
     }

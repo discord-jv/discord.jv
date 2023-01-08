@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Action for creating a Guild. Read {@link com.seailz.discordjv.DiscordJv#createGuild(String, DefaultMessageNotificationLevel)} for more information.
+ * This is an internal class, that is given to the user. It is highly recommended that you don't make your own instance of this class.
+ */
 public class CreateGuildAction {
     private String name;
     private VerificationLevel verificationLevel;
@@ -36,13 +40,13 @@ public class CreateGuildAction {
 
     public void setExplicitContentFilterLevel(ExplicitContentFilterLevel explicitContentFilterLevel) { this.explicitContentFilterLevel = explicitContentFilterLevel; }
 
-    public String getName() { return name; }
+    public String name() { return name; }
 
-    public VerificationLevel getVerificationLevel() { return verificationLevel; }
+    public VerificationLevel verificationLevel() { return verificationLevel; }
 
-    public DefaultMessageNotificationLevel getDefaultMessageNotificationLevel() { return defaultMessageNotificationLevel; }
+    public DefaultMessageNotificationLevel defaultMessageNotificationLevel() { return defaultMessageNotificationLevel; }
 
-    public ExplicitContentFilterLevel getExplicitContentFilterLevel() { return explicitContentFilterLevel; }
+    public ExplicitContentFilterLevel explicitContentFilterLevel() { return explicitContentFilterLevel; }
 
     public CompletableFuture<Guild> run() {
         CompletableFuture<Guild> future = new CompletableFuture<>();
@@ -54,9 +58,9 @@ public class CreateGuildAction {
                                 .put("default_message_notifications", defaultMessageNotificationLevel.getCode())
                                 .put("explicit_content_filter", explicitContentFilterLevel.getCode()),
                         new HashMap<>(),
-                        URLS.POST.GUILDS.BASE_URL,
+                        URLS.POST.GUILDS.CREATE_GUILD,
                         discordJv,
-                        URLS.BASE_URL,
+                        URLS.POST.GUILDS.CREATE_GUILD,
                         RequestMethod.POST
                 ).invoke().body(),
                 discordJv
