@@ -19,11 +19,13 @@ import com.seailz.discordjv.model.guild.verification.VerificationLevel;
 import com.seailz.discordjv.model.guild.welcome.WelcomeScreen;
 import com.seailz.discordjv.model.role.Role;
 import com.seailz.discordjv.model.user.User;
-import com.seailz.discordjv.utils.URLS;
+import com.seailz.discordjv.utils.*;
+import com.seailz.discordjv.utils.cache.JsonCache;
 import com.seailz.discordjv.utils.discordapi.DiscordRequest;
 import com.seailz.discordjv.utils.discordapi.DiscordResponse;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -114,8 +116,9 @@ public record Guild(
         WelcomeScreen welcomeScreen,
         List<Sticker> stickers,
         boolean premiumProgressBarEnabled,
-        DiscordJv discordJv
-) implements Compilerable {
+        DiscordJv discordJv,
+        JsonCache roleCache
+) implements Compilerable, Snowflake, CDNAble {
 
 
     @Override
@@ -434,7 +437,7 @@ public record Guild(
             premiumProgressBarEnabled = false;
         }
 
-        return new Guild(
+        Guild g = new Guild(
                 id,
                 name,
                 icon,
@@ -472,8 +475,18 @@ public record Guild(
                 welcomeScreen,
                 stickers,
                 premiumProgressBarEnabled,
-                discordJv
+                discordJv,
+                JsonCache.newc(new DiscordRequest(
+                        new JSONObject(),
+                        new HashMap<>(),
+                        URLS.GET.GUILDS.ROLES.GET_GUILD_ROLES.replace("{guild.id}", id),
+                        discordJv,
+                        URLS.GET.GUILDS.ROLES.GET_GUILD_ROLES,
+                        RequestMethod.GET
+                ))
         );
+        g.roleCache.reset(60000);
+        return g;
     }
 
     /**
@@ -658,6 +671,31 @@ public record Guild(
         );
     }
 
+    public List<Member> getMembers(int limit, String after) {
+        Checker.check(limit <= 0, "Limit must be greater than 0");
+        Checker.check(limit > 1000, "Limit must be less than or equal to 1000");
+        JSONArray arr = new DiscordRequest(
+                new JSONObject(),
+                new HashMap<>(),
+                URLS.GET.GUILDS.MEMBERS.LIST_GUILD_MEMBERS.replace(
+                        "{guild.id}",
+                        id
+                ) + "?limit=" + limit + (after == null ? "" : "&after=" + after),
+                discordJv,
+                URLS.GET.GUILDS.MEMBERS.LIST_GUILD_MEMBERS,
+                RequestMethod.GET
+        ).invoke().arr();
+
+        List<Member> members = new ArrayList<>();
+        for (Object obj : arr) {
+            members.add(Member.decompile((JSONObject) obj, discordJv, id, this));
+        }
+        System.out.println(arr);
+
+        return members;
+    }
+
+
     public List<Member> getMembers() {
         JSONArray arr = new DiscordRequest(
                 new JSONObject(),
@@ -672,7 +710,11 @@ public record Guild(
         ).invoke().arr();
 
         List<Member> members = new ArrayList<>();
-        arr.forEach(o -> members.add(Member.decompile((JSONObject) o, discordJv, id, this)));
+        for (Object obj : arr) {
+            members.add(Member.decompile((JSONObject) obj, discordJv, id, this));
+        }
+        System.out.println(arr);
+
         return members;
     }
 
@@ -742,18 +784,52 @@ public record Guild(
         return channels;
     }
 
+    /**
+     * Retrieves all the roles of a guild.
+     * This method uses caching, the cache will reset every 1 minute.
+     *
+     * @return
+     */
     public List<Role> roles() {
+        if (roleCache != null && !roleCache.isEmpty()) {
+            List<Role> roles = new ArrayList<>();
+            roleCache.get().getJSONArray("data").forEach(
+                    o -> roles.add(Role.decompile((JSONObject) o))
+            );
+            return roles;
+        }
+
         List<Role> roles = new ArrayList<>();
-        JSONArray res = new DiscordRequest(
+        DiscordRequest req = new DiscordRequest(
                 new JSONObject(),
                 new HashMap<>(),
                 URLS.GET.GUILDS.ROLES.GET_GUILD_ROLES.replace("{guild.id}", id),
                 discordJv,
                 URLS.GET.GUILDS.ROLES.GET_GUILD_ROLES,
                 RequestMethod.GET
-        ).invoke().arr();
+        );
+        JSONArray res = req.invoke().arr();
         res.forEach(o -> roles.add(Role.decompile((JSONObject) o)));
+
+        if (roleCache != null) {
+            roleCache.update(new JSONObject().put("data", res));
+        }
         return roles;
+    }
+
+    /**
+     * Returns the <b>@everyone</b> {@link Role role} of the guild, or if
+     * <br>nothing can be found, returns null.
+     * <p>
+     * Discord assigns the {@link Guild guild} id to the <b>@everyone</b> {@link Role role} id,
+     * <br>so this method loops through all the roles of the guild and checks if the id matches
+     * <br>using Java Streams.
+     *
+     * @return {@link Role role} or <b>null</b>
+     */
+    @Nullable
+    public Role getEveryoneRole() {
+        return roles().stream().filter(r -> r.id().equals(id())).findFirst().orElse(null);
     }
 
     public CreateGuildChannelAction createChannel(String name, ChannelType type) {
@@ -776,5 +852,8 @@ public record Guild(
     }
 
 
-
+    @Override
+    public StringFormatter formatter() {
+        return new StringFormatter("icons/", id, iconHash());
+    }
 }

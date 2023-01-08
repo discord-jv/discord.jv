@@ -16,6 +16,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -43,6 +44,7 @@ public class MessageCreateAction {
     // TODO: files
     // TODO: json payload
     private List<Attachment> attachments;
+    private List<File> fileUploads;
     private boolean supressEmbeds;
     private final String channelId;
     private final DiscordJv discordJv;
@@ -204,6 +206,27 @@ public class MessageCreateAction {
         return this;
     }
 
+    public MessageCreateAction addFile(File file) {
+        if (this.fileUploads == null)
+            this.fileUploads = new ArrayList<>();
+        this.fileUploads.add(file);
+        return this;
+    }
+
+    public MessageCreateAction addFiles(File... files) {
+        if (this.fileUploads == null)
+            this.fileUploads = new ArrayList<>();
+        this.fileUploads.addAll(List.of(files));
+        return this;
+    }
+
+    public MessageCreateAction addFiles(List<File> files) {
+        if (this.fileUploads == null)
+            this.fileUploads = new ArrayList<>();
+        this.fileUploads.addAll(files);
+        return this;
+    }
+
 
     public CompletableFuture<Message> run() {
         CompletableFuture<Message> future = new CompletableFuture<>();
@@ -217,13 +240,13 @@ public class MessageCreateAction {
             if (this.messageReference != null) payload.put("message_reference", this.messageReference.compile());
 
             JSONArray components = new JSONArray();
-            if (this.components != null) {
+            if (this.components != null && !this.components.isEmpty()) {
                 for (DisplayComponent component : this.components) {
                     components.put(component.compile());
                 }
             }
 
-            if (this.components != null)
+            if (this.components != null && !this.components.isEmpty())
                 payload.put("components", components);
 
             JSONArray embeds = new JSONArray();
@@ -236,6 +259,7 @@ public class MessageCreateAction {
             if (this.embeds != null)
                 payload.put("embeds", embeds);
 
+
             JSONArray stickerIds = new JSONArray();
             if (this.stickerIds != null) {
                 for (String stickerId : this.stickerIds) {
@@ -243,21 +267,18 @@ public class MessageCreateAction {
                 }
             }
 
-            if (this.stickerIds != null)
+            if (this.stickerIds != null && !this.stickerIds.isEmpty())
                 payload.put("sticker_ids", stickerIds);
 
-            JSONArray attachments = new JSONArray();
             if (this.attachments != null) {
+                JSONArray files = new JSONArray();
                 for (Attachment attachment : this.attachments) {
-                    attachments.put(attachment.compile());
+                    files.put(attachment.compile());
                 }
+                payload.put("attachments", files);
             }
 
-            if (this.attachments != null)
-                payload.put("attachments", attachments);
-
             if (this.supressEmbeds) payload.put("flags", MessageFlag.SUPPRESS_EMBEDS.getLeftShiftId());
-
 
             DiscordRequest request = new DiscordRequest(
                     payload,
@@ -268,7 +289,11 @@ public class MessageCreateAction {
                     RequestMethod.POST
             );
 
-            DiscordResponse response = request.invoke();
+            DiscordResponse response = null;
+            if (fileUploads != null && !fileUploads.isEmpty())
+                response = request.invokeWithFiles(new ArrayList<>(fileUploads).toArray(new File[0]));
+            else
+                request.invoke();
             return Message.decompile(response.body(), discordJv);
         });
         return future;
